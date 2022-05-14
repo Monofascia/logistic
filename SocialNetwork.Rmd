@@ -1,0 +1,223 @@
+---
+title: "Analisi di regressione Logistica"
+author: "E.Chiola & P.Iezzi"
+date: "5/6/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(knitr)
+
+```
+
+
+```{r echo=FALSE}
+options(scipen = 8)
+
+```
+
+# Overview dei dati
+
+Viene mostrata la struttura del dataset, composto da 400 osservazioni su 4 variabili esplicative. L'obiettivo di questa analisi è quella di prevedere la probabilità di vendita di un prodotto pubblicizzato su Facebook.
+
+
+```{r echo=FALSE}
+Social_Network_Ads <- read_csv("C:/Users/Patrizio/Desktop/TUTTO/Ud'A/CLEBA/SUPERATE/DATA SCIENCE/2 progetto-Data Science/Social_Network_Ads.csv", col_types = cols(Gender = col_factor(levels = c()), Purchased = col_factor(levels = c())))
+View(Social_Network_Ads)
+str(Social_Network_Ads)
+attach(Social_Network_Ads)
+```
+
+
+```{r}
+
+kable(head(Social_Network_Ads)[1:5,2:5])
+```
+
+
+```{r}
+summary(Social_Network_Ads[,2:5])
+```
+
+
+# Regressione logistica semplice
+
+
+Si procede con l'analisi di regressione logistica semplice, ponendo come variabilie dipendente <b>Purchased</b> e come variabile esplicativa il salario.
+
+```{r}
+logistico1<-glm(Purchased~EstimatedSalary, family = binomial(link = logit), data = Social_Network_Ads)
+summary(logistico1)
+
+```
+
+```{r}
+#previsione con salario=30000
+newdata=data.frame(EstimatedSalary=30000)
+predict(logistico1, newdata, type = "response")
+```
+
+```{r}
+#previsione con salario=60000
+newdata1=data.frame(EstimatedSalary=60000)
+predict(logistico1, newdata1, type = "response")
+```
+
+```{r}
+#previsione con salario=100000
+newdata2=data.frame(EstimatedSalary=100000)
+predict(logistico1, newdata2, type = "response")
+```
+All'aumentare del salario aumenta la probabilità che l'acquisto venga effettuato. Con un salario di 100'000$ una persona su due acquista.
+<br>
+<br>
+<br>
+
+Si continua con l'analisi di regressione logistica semplice, ponendo come variabilie esplicativa l'età.
+
+```{r}
+logistico2<-glm(Purchased~Age,family = binomial(link = logit), data = Social_Network_Ads )
+summary(logistico2)
+```
+
+```{r}
+#previsione con età=25
+newdata3=data.frame(Age=25)
+predict(logistico2, newdata3, type = "response")
+```
+
+```{r}
+#previsione con età=50
+newdata4=data.frame(Age=50)
+predict(logistico2, newdata4, type = "response")
+```
+
+All'aumentare dell'età aumenta considerevolmente la probabilità di acquisto
+
+### Dummy
+```{r}
+logistico<-glm(Purchased~Gender, family = binomial(link = logit), data = Social_Network_Ads)
+summary(logistico)
+```
+
+La variabile dummy 'Gender' è poco significativa, quindi bisogna accettare che la suddetta variabile nulla spiega rispetto alle vendite.
+
+```{r}  
+#predizione acquisto donna
+predlin<-coef(logistico)[1]+coef(logistico)[2]*1 #predizione Gender Female
+pi<-exp(predlin)/(1+exp(predlin))
+pi
+```
+ 
+```{r}
+#predizione acquisto uomo
+predlin1<-coef(logistico)[1]+coef(logistico)[2]*0 #predizione Gender Male
+pi1<-exp(predlin1)/(1+exp(predlin1))
+pi1 
+```
+
+La scarsa significatività della variabile Gender è confermata dalla predizione, perché si può osservare che c'è bassa variazione percentuale.
+
+
+# Regressione logistica Multipla
+
+Si procede con l'analisi di regressione multipla, inserendo tutte le variabili contemporaneamente.
+```{r}
+logisticoALL<-glm(Purchased~Gender+Age+EstimatedSalary, data = Social_Network_Ads, family = binomial(link = logit))
+summary(logisticoALL)
+```
+
+
+Si noti come il coefficiente per il sesso femminile sia divenuto negativo, risultato opposto al modello logistico che considera solo la variabile dummy. Questo effetto si chiama <b>confunding</b> e si verifica nel caso di regressioni multiple nelle quali le variabili indipendenti possono presentare una correlazione.
+Il coefficiente negativo nella multipla indica che per un valore fisso di salario ed età, una donna ha meno probabilità di acquistare rispetto ad un uomo. 
+
+
+
+```{r}
+#predizione età=50, salario=75000, gender=Female
+predlin2<- coef(logisticoALL)[1]+coef(logisticoALL)[2]*1+coef(logisticoALL)[3]*50+coef(logisticoALL)[4]*75000
+pi2<-exp(predlin2)/(1+exp(predlin2))
+pi2
+```
+
+```{r}
+#predizione età=50, salario=75000, gender=Male
+predlin3<- coef(logisticoALL)[1]+coef(logisticoALL)[2]*0+coef(logisticoALL)[3]*50+coef(logisticoALL)[4]*75000
+pi3<-exp(predlin3)/(1+exp(predlin3))
+pi3
+```
+
+Sapendo che:<br> 
+<b>E(età | Gender=Male)</b>: 36.9
+<br><b>E(età | Gender=Female)</b>: 38.4
+<br>
+<br><b>E(EstimatedSalary | Gender=Male)</b>: 67642.86
+<br><b>E(EstimatedSalary | Gender=Female)</b>: 71760
+
+
+L'analisi logistica semplice con Dummy mostra una maggiore propensione all'acquisto da parte del sesso femminile, ciò è spiegato dall'osservazione delle medie condizionate al carattere gender: le donne presentano età e salario mediamente più alti (entrambi i caratteri contribuiscono positivamente alla probabilità di acquisto), quindi, di conseguenza, hanno probabilità più elevate ad acquistare. Nella regressione multipla i caratteri suddetti sono contemplati nel modello e non possono più motivare la differenza mostrata dalla regressione semplice. <br>
+
+
+  
+```{r} 
+#Matrice di confusione
+threshold=0.5
+actual_values<-Purchased
+predicted_values<-ifelse(predict(logisticoALL,type = "response")>threshold,1,0)
+conf_matrix_logistico<-table(actual_values, predicted_values)
+conf_matrix_logistico
+```
+
+```{r}
+#Hit Ratio (a+d)/n
+hr<-(conf_matrix_logistico[1,1]+conf_matrix_logistico[2,2])/sum(conf_matrix_logistico)
+hr
+```
+Il tasso di unità correttamente classificate è di 85%, quindi sufficientemente buono.
+
+```{r}
+#Specificità a/(a+b)
+sp<-conf_matrix_logistico[1,1]/(conf_matrix_logistico[1,1]+conf_matrix_logistico[1,2])
+sp
+```
+
+```{r}
+#Sensitività d/(d+c)
+se<-conf_matrix_logistico[2,2]/(conf_matrix_logistico[2,2]+conf_matrix_logistico[2,1])
+se
+```
+
+
+# Regressione logistica con sola intercetta
+Si va ad analizzare il modello di regressione con sola intercetta, che ci servirà per le successive analisi.
+```{r}
+logistico0<-glm(Purchased~1, data = Social_Network_Ads, family = binomial(link = logit))
+summary(logistico0)
+
+```
+
+
+# G-Test
+```{r}
+anova(logistico0, logisticoALL, test = "Chisq")
+```
+Ponendo a confronto il modello con solo intercetta e quello con tutte le variabili, si conlude che le variabili esplicative sono rilevanti.
+
+# Pseudo R squared
+```{r}
+L0<-logLik(logistico0)
+L1<-logLik(logisticoALL)
+Pseudo_Rsquared<-1-(L1/L0)
+Pseudo_Rsquared
+```
+Osservando il risultato di Pseudo R quadro, si può affermare di essere in presenza di un ottimo adattamento.
